@@ -10,7 +10,7 @@ on:
       - main
   
   schedule:
-    - cron: "49 10 * * *"
+    - cron: "00 11 * * *"
       timezone: "Asia/Kuala_Lumpur"
 
 permissions:
