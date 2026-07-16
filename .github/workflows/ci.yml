@@ -1,0 +1,65 @@
+name: Create Meetup Automated Tests
+
+on:
+  # Run when code is pushed to these branches
+  push:
+    branches:
+      - main
+      - develop
+
+  # Run when a pull request is created for main
+  pull_request:
+    branches:
+      - main
+
+  # Run automatically every day at 9:00 AM Malaysia time
+  # GitHub uses UTC, so 01:00 UTC = 09:00 Malaysia time
+  schedule:
+    - cron: "0 1 * * *"
+
+  # Allow manual execution from the Actions page
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  automated-testing:
+    name: Run pytest acceptance tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Download repository files
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create report folder
+        run: mkdir -p reports
+
+      - name: Run all automated tests
+        run: |
+          python -m pytest tests/ -v \
+            --tb=short \
+            --html=reports/test-report.html \
+            --self-contained-html \
+            --junitxml=reports/junit.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: create-meetup-test-report-${{ github.run_number }}
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 30
