@@ -1,6 +1,6 @@
 name: Create Meetup Automated Tests
 
-run-name: Create Meetup Tests — ${{ github.event_name }}
+run-name: Create Meetup Tests - ${{ github.event_name }}
 
 on:
   push:
@@ -11,8 +11,9 @@ on:
     branches:
       - main
 
+  # Temporary test: automatically run every 5 minutes
   schedule:
-    - cron: "30 13 * * *"
+    - cron: "*/5 * * * *"
       timezone: "Asia/Kuala_Lumpur"
 
 permissions:
