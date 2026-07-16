@@ -8,6 +8,10 @@ on:
   pull_request:
     branches:
       - main
+  
+  schedule:
+    - cron: "41 10 * * *"
+      timezone: "Asia/Kuala_Lumpur"
 
 permissions:
   contents: read
