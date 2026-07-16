@@ -1,209 +1,57 @@
 name: Create Meetup Automated Tests
 
 on:
-  # Automatically run whenever code is pushed to main
   push:
     branches:
       - main
 
-  # Automatically run whenever a pull request targets main
   pull_request:
     branches:
       - main
-
-  # Automatically run every day at 10:40 AM Malaysia time
+  
   schedule:
-    - cron: "48 10 * * *"
+    - cron: "49 10 * * *"
       timezone: "Asia/Kuala_Lumpur"
 
-# Only allow the workflow to read repository files
 permissions:
   contents: read
 
 jobs:
-  create-meetup-tests:
+  create-meetup-testing:
     name: Create Meetup Automated Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      # Step 1: Download the project files from GitHub
       - name: Prepare project
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      # Step 2: Prepare Python
-      - name: Prepare Python 3.11
-        uses: actions/setup-python@v7
+      - name: Prepare Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: requirements.txt
 
-      # Step 3: Install Flask project and testing packages
-      - name: Install requirements
+      - name: Install testing requirements
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-html
 
-      # Step 4: Create the report folder
-      - name: Prepare report folder
-        run: mkdir -p reports
-
-      # Step 5: Run only the Create Meetup tests
-      #
-      # set -o pipefail ensures the workflow becomes red
-      # when any pytest test fails.
       - name: Test Create Meetup
-        shell: bash
         run: |
-          set -o pipefail
+          mkdir -p reports
 
-          python -m pytest tests/test_create_meetup.py \
-            -v \
+          python -m pytest tests/test_create_meetup.py -v \
             --tb=short \
             --html=reports/create-meetup-test-report.html \
             --self-contained-html \
-            --junitxml=reports/create-meetup-junit.xml \
-            2>&1 | tee reports/create-meetup-test-output.txt
+            --junitxml=reports/create-meetup-junit.xml
 
-      # Step 6: Create a readable pass/fail summary in GitHub
-      #
-      # This runs even when pytest fails.
-      - name: Create pass and fail summary
-        if: always()
-        shell: bash
-        run: |
-          python - <<'PY'
-          import os
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          report_path = Path("reports/create-meetup-junit.xml")
-          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
-
-          lines = [
-              "# Create Meetup Automated Test Report",
-              "",
-          ]
-
-          if not report_path.exists():
-              lines.extend([
-                  "⚠️ The JUnit test report was not generated.",
-                  "",
-                  "Open the workflow log or download the text report "
-                  "to check the error.",
-              ])
-
-              summary_path.write_text(
-                  "\n".join(lines),
-                  encoding="utf-8",
-              )
-              raise SystemExit(0)
-
-          try:
-              root = ET.parse(report_path).getroot()
-              test_cases = list(root.iter("testcase"))
-          except Exception as error:
-              lines.extend([
-                  "⚠️ The test report could not be read.",
-                  "",
-                  f"Error: `{error}`",
-              ])
-
-              summary_path.write_text(
-                  "\n".join(lines),
-                  encoding="utf-8",
-              )
-              raise SystemExit(0)
-
-          passed = 0
-          failed = 0
-          errors = 0
-          skipped = 0
-          results = []
-
-          for test_case in test_cases:
-              class_name = test_case.attrib.get("classname", "")
-              test_name = test_case.attrib.get(
-                  "name",
-                  "Unknown test",
-              )
-              duration = test_case.attrib.get("time", "0")
-
-              if class_name:
-                  complete_name = f"{class_name}::{test_name}"
-              else:
-                  complete_name = test_name
-
-              if test_case.find("error") is not None:
-                  status = "⚠️ Error"
-                  errors += 1
-
-              elif test_case.find("failure") is not None:
-                  status = "❌ Failed"
-                  failed += 1
-
-              elif test_case.find("skipped") is not None:
-                  status = "⏭️ Skipped"
-                  skipped += 1
-
-              else:
-                  status = "✅ Passed"
-                  passed += 1
-
-              complete_name = complete_name.replace("|", "\\|")
-
-              results.append(
-                  (complete_name, status, duration)
-              )
-
-          total = len(test_cases)
-
-          overall_status = (
-              "✅ All tests passed"
-              if failed == 0 and errors == 0
-              else "❌ Some tests failed"
-          )
-
-          lines.extend([
-              f"## {overall_status}",
-              "",
-              f"- **Total test cases:** {total}",
-              f"- **Passed:** {passed}",
-              f"- **Failed:** {failed}",
-              f"- **Errors:** {errors}",
-              f"- **Skipped:** {skipped}",
-              "",
-              "## Individual Test Results",
-              "",
-              "| Test case | Result | Duration |",
-              "|---|---|---:|",
-          ])
-
-          for test_name, status, duration in results:
-              lines.append(
-                  f"| `{test_name}` | {status} | {duration}s |"
-              )
-
-          summary_path.write_text(
-              "\n".join(lines) + "\n",
-              encoding="utf-8",
-          )
-          PY
-
-      # Step 7: Upload all reports
-      #
-      # if: always() means the reports are uploaded
-      # whether the tests pass or fail.
-      - name: Save Create Meetup test report
+      - name: Save Create Meetup report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Create-Meetup-Automated-Test-Report-${{ github.run_number }}
-          path: |
-            reports/create-meetup-test-report.html
-            reports/create-meetup-junit.xml
-            reports/create-meetup-test-output.txt
+          name: Create-Meetup-Automated-Test-Report
+          path: reports/
           if-no-files-found: warn
           retention-days: 30
